@@ -1,0 +1,206 @@
+library(shiny)
+library(ggplot2)
+library(gridExtra)
+library(plyr)
+
+setwd("C://Users//Abtin//Dropbox//Collaborations//Energy Population Research//RECS")
+#setwd("../")
+D2009 <- read.table("09_public.csv", header=T, sep=',')
+names(D2009)
+
+
+## Trim to necessary fields
+
+necFields <- c("DOEID",                              #id variable
+               "HDD65","CDD65","HDD30YR", "CDD30YR", #these are local climate variables
+               "DIVISION","REGIONC",                 #census divisions and regions
+               "HHAGE",                              #age of householder
+               "AGEHHMEMCAT2", "AGEHHMEMCAT3","AGEHHMEMCAT4","AGEHHMEMCAT5","AGEHHMEMCAT6",
+               "AGEHHMEMCAT7","AGEHHMEMCAT8","AGEHHMEMCAT9","AGEHHMEMCAT10","AGEHHMEMCAT11",
+               "AGEHHMEMCAT12","AGEHHMEMCAT13","AGEHHMEMCAT14", #age of householder members 2-14 (categorical)
+               "NWEIGHT",                            #weight variable
+               "TOTALBTU","TOTALDOL",                #total energy consumption and total energy expenditure
+               "YEARMADE","TYPEHUQ",                 #year the building was built and building type
+              "EDUCATION",                          #highest education of householder
+              "NHSLDMEM",                           #household size   
+               "MONEYPY",                           #income
+              "TOTSQFT")                            #house size
+
+D2009 <- D2009[ ,necFields]
+
+names(D2009)
+
+###converting YEARMADE to actual age###
+
+D2009$YEARMADE <- (2009-D2009$YEARMADE)
+count(D2009$YEARMADE)
+
+## transforming hhage variable into categorical (just like other household members)
+
+D2009$HHAGE <- ifelse(D2009$HHAGE > 15 & D2009$HHAGE < 20, 4,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 19 & D2009$HHAGE < 25, 5,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 24 & D2009$HHAGE < 30, 6,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 29 & D2009$HHAGE < 35, 7,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 34 & D2009$HHAGE < 40, 8,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 39 & D2009$HHAGE < 45, 9,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 44 & D2009$HHAGE < 50, 10,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 49 & D2009$HHAGE < 55, 11,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 54 & D2009$HHAGE < 60, 12,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 59 & D2009$HHAGE < 65, 13,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 64 & D2009$HHAGE < 70, 14,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 69 & D2009$HHAGE < 75, 15,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 74 & D2009$HHAGE < 80, 16,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 79 & D2009$HHAGE < 85, 17,D2009$HHAGE )
+D2009$HHAGE <- ifelse(D2009$HHAGE > 84 , 18,D2009$HHAGE )
+
+
+##Create count columns
+
+D2009$age5 <- rowSums(D2009[,8:21]==1) #<5 years olds
+D2009$age5to9 <- rowSums(D2009[,8:21]==2) #5-9 years olds
+D2009$age10to14 <- rowSums(D2009[,8:21]==3) #10-14 years olds
+D2009$age15to19 <- rowSums(D2009[,8:21]==4) #15-19 years olds
+D2009$age20to24 <- rowSums(D2009[,8:21]==5) #20-24 years olds
+D2009$age25to29 <- rowSums(D2009[,8:21]==6) #25-29 years olds
+D2009$age30to34 <- rowSums(D2009[,8:21]==7) #30-34 years olds
+D2009$age35to39 <- rowSums(D2009[,8:21]==8) #35-39 years olds
+D2009$age40to44 <- rowSums(D2009[,8:21]==9) #40-44 years olds
+D2009$age45to49 <- rowSums(D2009[,8:21]==10) #45-49 years olds
+D2009$age50to54 <- rowSums(D2009[,8:21]==11) #50-54 years olds
+D2009$age55to59 <- rowSums(D2009[,8:21]==12) #55-59 years olds
+D2009$age60to64 <- rowSums(D2009[,8:21]==13) #60-64 years olds
+D2009$age65to69 <- rowSums(D2009[,8:21]==14) #65-69 years olds
+D2009$age70to74 <- rowSums(D2009[,8:21]==15) #70-74 years olds
+D2009$age75to79 <- rowSums(D2009[,8:21]==16) #75-79 years olds
+D2009$age80to84 <- rowSums(D2009[,8:21]==17) #80-84 years olds
+D2009$age85 <- rowSums(D2009[,8:21]==18) #>85 years olds
+
+###multiplying nweight
+#D2009$ENRG <- D2009$NWEIGHT * D2009$TOTALBTU
+
+##Looking at data##
+names(D2009)
+attach(D2009)
+table(D2009$REGIONC) ##census regions
+boxplot(TOTALDOL~DIVISION) ##energy expenditure by census division
+
+par(mfrow=c(1,1))
+boxplot(HDD65~DIVISION) ##look how different climate is between census divisions
+boxplot(CDD65~DIVISION) ##look how different climate is between census divisions
+
+
+
+
+###regressions####
+##preparing data for census divisions
+d1 <- subset(D2009, D2009$DIVISION == 1)   
+d2 <- subset(D2009, D2009$DIVISION == 2) 
+d3 <- subset(D2009, D2009$DIVISION == 3) 
+d4 <- subset(D2009, D2009$DIVISION == 4) 
+d5 <- subset(D2009, D2009$DIVISION == 5) 
+d6 <- subset(D2009, D2009$DIVISION == 6) 
+d7 <- subset(D2009, D2009$DIVISION == 7) 
+d8 <- subset(D2009, D2009$DIVISION == 8) 
+d9<- subset(D2009, D2009$DIVISION == 9) 
+d10 <- subset(D2009, D2009$DIVISION == 10) 
+
+
+##LMs
+fit0 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit0)
+
+attach(d1)
+fit1 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit1)
+
+attach(d2)
+fit2 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit2)
+
+attach(d3)
+fit3 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit3)
+
+attach(d4)
+fit4 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit4)
+
+attach(d5)
+fit5 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit5)
+
+attach(d6)
+fit6 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit6)
+
+attach(d7)
+fit7 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit7)
+
+attach(d8)
+fit8 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit8)
+
+attach(d9)
+fit9 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit9)
+
+attach(d10)
+fit10 <- lm(TOTALBTU~age5+age5to9+age10to14+age15to19+age20to24+age25to29+age30to34+age35to39+age40to44+age45to49
+           +age50to54+age55to59+age60to64+age65to69+age70to74+age75to79+age80to84+age85+HDD65+CDD65+YEARMADE+MONEYPY+TOTSQFT)
+summary(fit10)
+
+
+
+
+
+
+###plots
+ages0<- fit0$coefficients[2:19]
+
+ages1<- fit1$coefficients[2:19]
+ages2<- fit2$coefficients[2:19]
+ages3<- fit3$coefficients[2:19]
+ages4<- fit4$coefficients[2:19]
+ages5<- fit5$coefficients[2:19]
+ages6<- fit6$coefficients[2:19]
+ages7<- fit7$coefficients[2:19]
+ages8<- fit8$coefficients[2:19]
+ages9<- fit9$coefficients[2:19]
+ages10<- fit10$coefficients[2:19]
+
+
+
+par(mfrow=c(2,5))
+#the overal bar plot
+barplot(ages0)
+
+barplot(ages1)
+barplot(ages2)
+barplot(ages3)
+barplot(ages4)
+barplot(ages5)
+barplot(ages6)
+barplot(ages7)
+barplot(ages8)
+barplot(ages9)
+barplot(ages10)
+
+
+
+
+
+
+
+
+
